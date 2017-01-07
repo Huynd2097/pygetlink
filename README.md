@@ -2,5 +2,6 @@
 
 ## List host
 
-- [-] Phimmoi.com
-+ Anime47
+- [x] Phimmoi.com
+- [x] Anime47
+
