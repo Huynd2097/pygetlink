@@ -6,7 +6,7 @@
 - [x] http://anime47.com
 - [x] http://mp3.zing.vn
 - [x] http://tv.zing.vn
-- [ ] http://woim.net
+- [x] http://woim.net
 - [ ] http://dailymotion.com
 - [ ] https://soundcloud.com
 - [ ] https://youtube.com
