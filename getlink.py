@@ -10,24 +10,24 @@ from multiprocessing import Pool
 import _support		#my function
 
 
-__maxThread = 50 		#for multithread
-
+__maxThread = 30			#for multithread
+# 376,379,388,391,400
 
 def main():
 
 	link1 = 'http://anime47.com/xem-phim-one-piece-dao-hai-tac-ep-001/76748.html'
 	link2 = 'http://www.phimmoi.net/phim/dao-hai-tac-665/xem-phim.html'
 
-	link3 = 'http://tv.zing.vn/series/One-Piece-Tap-601-800'
+	link3 = 'http://tv.zing.vn/series/One-Piece-Tap-1-200'
 	link4 = 'http://tv.zing.vn/video/Dao-Hai-Tac-One-Piece-Tap-601/IWZA0BWO.html'
 
 	link5 = 'http://mp3.zing.vn/playlist/333-h4212421/IOUUBD77.html?st=6'
-	# lists1 = get_list_anime47(link1)
+
 	# for k in lists1:
 	# 	print k
 	# return
 	x = 4
-	url = get_links(link5, -1,1,10)
+	url = get_links(link2, -1,260,266)
 	# print url 
 	# # print get_link_anime47('http://anime47.com/xem-phim-one-piece-dao-hai-tac-ep-046/76793.html')
 	# return
@@ -40,27 +40,6 @@ def main():
 		for u in url:
 			print u
 
-	# lists = get_list_anime47('http://anime47.com/xem-phim-ngoan-tay-du-ep-01/140640.html')
-	# print get_list_anime47('http://anime47.com/xem-phim-ngoan-tay-du-ep-01/140640.html')
-	# if l:
-	# 	for link in l[0]:
-	# 		print get_link_anime47(link,-1)
-	# print get_list_phimmoi("http://www.phimmoi.net/phim/phi-dao-huu-kien-phi-dao-4620/xem-phim.html")
-
-	# def say_hello(name):
- #    	print 'Hello!'.format(name)
-
-	# # get the function by name
-	# method_name = 'say_hello'
-	# method = eval(method_name)
-
-	# # call it like a regular function later
-	# args = ['friend']
-	# kwargs = {}
-	# print eval('get_links')('http://anime47.com/xem-phim-ngoan-tay-du-ep-01/140640.html', 480)
-	# print globals()
-	# print get_links('http://tv.zing.vn/')
-	# print get_links('http://anime47.vn/')
 
 #multithread get_links
 def multi_run_get_links(args={}):
@@ -298,7 +277,7 @@ def get_link_tvzing(url, quality=''):
 
 	return ret
 #get links in series
-# return [{Title : URL}]
+# return [{Ep : URL}]
 def get_list_tvzing(url):
 	match = re.findall('(tv\.zing\.vn/)(series/)?([\w-]+)', url)
 	if not match:
@@ -319,9 +298,42 @@ def get_list_tvzing(url):
 	return ret
 
 
+############################################################################################################
 
+def get_link_woim(url, quality=''):
+	if not re.search('www.woim.net/song/.*?html', url):
+		return ''
 
+	session = requests.session()
+	source = session.get(url).content
 
+	match = re.search('code=(.*?)"', source)
+	if not match:
+		return ''
+	
+	queryUrl = match.group(1)
+	session.headers.update({'referer': 'http://www.woim.net/mp3/player.swf'})
+	response = requests.get(queryUrl).content
+	match = re.search('location="(.*?)"', response)
+
+	if not match:
+		return ''
+	return match.group(1)
+
+def get_list_woim(url):
+	if not re.search('www.woim.net/album/.*?html', url):
+		return ''
+
+	source = requests.get(url).content
+
+	match = re.findall('div itemprop="track".*?href="(.*?)"', source)
+	if not match:
+		return ''
+		
+	ret = []
+	for x in xrange(0, len(match)):
+		ret.append( {x+1 : match[x]})
+	return ret
 
 
 

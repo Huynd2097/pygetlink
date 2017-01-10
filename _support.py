@@ -8,15 +8,7 @@ import urllib
 from Crypto.Cipher import AES
 
 def main():
-	# a = [{"resolution":360,"type":"mp4","width":640,"height":360,"url":"url360"},{"resolution":480,"type":"mp4","width":854,"height":480,"url":"url480"}]
-	# print filter_url(a, keyQuality='resolution', keyUrl='url', quality=-1)
-
-	passwd = "phimbathu.com1451"
-	# string = open('b.txt').read()
-	# string = 'U2FsdGVkX1+\/Q3KwuDkL4ZvuvF6xdaHmS97sbgXEzxu\/9BEKCNQHqUHt\/HLZJIJYJvdCSWpHYkHSf5xgLFefeECdqDRaV77ucj5yySr0cMcoNSj2\/IbY+ja5+V\/xmlQBDd7Hk2GHkokxxa\/7pal+THkJejdBTXcDolu7YV\/yNw6hMyOr+eGqPg2rKXFceAOUGdvrIJFxTUmDkxl\/QYSYvfXmKmPRf9IhbDWJaB\/1\/LYtdyP8IXhXDtiXJskcYyz60bAbF\/aNfBz2LqTmyOvmiS8U2MqZO\/h9yuruIwinnNwKPjrMufG1qj\/mWdW7tbb7VpQBtn5nl\/MZD4INI4utYX8mkM8Y750gpGH4QNei2PgDTq4alD8NMmuEplnj9XfGyVINRlFgpIxUoqjqQC+wHbLSdSxiMGY0tqsNiW0I7vOT9n8RGRwCPPm6TmuDswATcgz2SVP558xdPuOpLhkgQazNR1LQUEzUHuN29TN1mmVP7X5WW11LnYRG4KhkgYCkXcTYJAVyzqwq5KF2VHr08hLw4L4jzL7rdXvSKBsC9fHsHWPxRazqVeUX07+NlhjX9+6T1maaUga0lkjAThHes\/puNzeSEmgeLpQC82zSKOUl4AZQVVhQQnqpVghSpB8Bde0NWfugDMQPbvYDgYvVpbSB1lurP1\/d9dmfNl2LjzI='
-
-	# print aes_cbc(string, passwd)
-	# print set_title_downloadable_url(open('b.txt').read(), 'one_piece')
+	pass
 
 def decrypt_aes_cbc(string, passwd):
 	#declaire
