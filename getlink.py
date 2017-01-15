@@ -23,11 +23,13 @@ def main():
 
 	link5 = 'http://mp3.zing.vn/playlist/333-h4212421/IOUUBD77.html?st=6'
 
+	link11 = 'http://www.woim.net/song/39082/arunda.html'
 	# for k in lists1:
 	# 	print k
 	# return
 	x = 4
-	url = get_links(link2, -1,260,266)
+	url = get_links(link1, -1,751,770)
+	# url = get_links(link11)
 	# print url 
 	# # print get_link_anime47('http://anime47.com/xem-phim-one-piece-dao-hai-tac-ep-046/76793.html')
 	# return
@@ -165,7 +167,7 @@ def get_link_phimmoi(url, quality='all'):
 
 	urlStream = 'http://www.phimmoi.net/' + match.group(0)
 	source = session.get(urlStream).content
-
+	print source
 	match = re.search('"medias":(\[.*?\])', source)
 	if not match:
 		print 'get_link_phimmoi: Get Data ERROR!'
@@ -304,16 +306,12 @@ def get_link_woim(url, quality=''):
 	if not re.search('www.woim.net/song/.*?html', url):
 		return ''
 
-	session = requests.session()
-	source = session.get(url).content
-
+	source = requests.get(url).content
 	match = re.search('code=(.*?)"', source)
 	if not match:
 		return ''
 	
-	queryUrl = match.group(1)
-	session.headers.update({'referer': 'http://www.woim.net/mp3/player.swf'})
-	response = requests.get(queryUrl).content
+	response = requests.get(match.group(1)).content
 	match = re.search('location="(.*?)"', response)
 
 	if not match:
@@ -337,6 +335,149 @@ def get_list_woim(url):
 
 
 
+def get_link_dailymotion(url, quality=''):
+	match =  re.search('dailymotion.com/video/(.*?)_.+', url)
+	if not match:
+		return ''
+	videoId = match.group(1)
+	source = requests.get('http://www.dailymotion.com/embed/video/' + videoId).content
+
+	keyQuality = [240, 480, 720, 1080]
+	ret = {}
+	for qualityStream in keyQuality:
+		match = re.search(str(qualityStream)+'"\},\{"type":"video.*?url":"(.*?)"', source)
+		if match:
+			urlStream = match.group(1).replace('\\', '')
+			ret[qualityStream] = urlStream
+
+	if not ret:
+		return ''
+
+	if isinstance(quality, int):
+		if quality <= 0:
+			return ret[max(ret.keys())]
+		elif quality in ret:
+			return ret[quality]
+		else:
+			return ret[min(ret.keys())]
+
+	return ret
+
+
+def get_list_dailymotion(url):
+	match = re.search('dailymotion.com/((playlist/\w+)|(channel/\w+)|(\w+))', url)
+	if not match:
+		return ''
+	apiUrl = 'https://api.' + match.group(0) + '/videos?limit=100&page=' # + page
+	if not (('/playlist/' in url) or ('/channel/' in apiUrl)):
+		apiUrl = apiUrl.replace('dailymotion.com/','dailymotion.com/user/')
+		
+
+	ret = []
+	for page in xrange(1,100):
+		response = requests.get(apiUrl + str(page)).content
+		response = json.loads(response)
+		if 'error' in response:
+			break
+		for video in response['list']:
+			ret.append( {len(ret) + 1 : 'http://www.dailymotion.com/video/' + video['id']})
+		if not response['has_more']:
+			break
+
+	return ret
+
+
+def  get_link_soundcloud(url, quality=''):
+	if not ('soundcloud.com/' in url):
+		return ''
+
+	# =============== solution #1 ===============
+	response = requests.get('http://keepvid.com/?url=' + url).content
+	match = re.search('href="(https://api.soundcloud.com/.*?)"', response)
+	if not match:
+		return ''
+
+	return match.group(1)
+ 
+	# =============== solution #2 ===============
+	# listClientIDs = ['fDoItMDbsbZz8dY16ZzARCZmzgHBPotA', 'f3d0bb2d98c2cc1b42cdaff035033de0']
+	# resolveUrl = 'https://api.soundcloud.com/resolve?url={TRACK_URL}&_status_code_map%5B302%5D=200&_status_format=json&client_id={CLIENT_ID}'
+
+	# for clientID in listClientIDs:
+	# 	apiUrl = resolveUrl.replace('{TRACK_URL}', url).replace('{CLIENT_ID}', clientID)
+	# 	responseApi = requests.get(apiUrl).content
+	# 	if '"location":' in responseApi:
+	# 		responseTrack = requests.get(json.loads(responseApi)['location']).content
+	# 		return json.loads(responseTrack)['stream_url'] + '?client_id=' + clientID
+	# return ''
+
+def get_list_soundcloud(url):
+	if not ('soundcloud.com/' in url):
+		return ''
+
+	response = requests.get(url).content
+	match = re.findall('a itemprop="url" href="(.*?)"', response)
+	if not match:
+		return ''
+
+	ret = []
+	for x in xrange(1,len(match)):
+		urlTrack = 'https://soundcloud.com' + match[x]
+		ret.append( {x : urlTrack})
+
+	return ret
+
+
+# quality is not avalable :v
+def get_link_tumblr(url, quality=''):
+	if (not 'tumblr.com/' in url):
+		return ''
+
+	source = requests.get(url).content
+	match = re.search("iframe src='(.*?)'", source) 	#NOTE: src='...' 
+	if not match:
+		return ''
+
+	source = requests.get(match.group(1)).content
+	match = re.search('source src="(.*?)"', source)
+	if not match:
+		return ''
+
+	return match.group(1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
 
 
 
