@@ -7,8 +7,8 @@
 - [x] http://mp3.zing.vn
 - [x] http://tv.zing.vn
 - [x] http://woim.net
-- [ ] http://dailymotion.com
-- [ ] https://soundcloud.com
+- [x] http://dailymotion.com
+- [x] https://soundcloud.com
 - [ ] https://youtube.com
 - [ ] https://tumblr.com
 - [ ] http://chiasenhac.vn
