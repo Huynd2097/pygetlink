@@ -2,15 +2,15 @@
 
 ## List host
 
-- [x] http://phimmoi.net
-- [x] http://anime47.com
+- [ ] http://phimmoi.net
+- [ ] http://anime47.com
 - [x] http://mp3.zing.vn
 - [x] http://tv.zing.vn
 - [x] http://woim.net
 - [x] http://dailymotion.com
 - [x] https://soundcloud.com
 - [ ] https://youtube.com
-- [ ] https://tumblr.com
-- [ ] http://chiasenhac.vn
-- [ ] http://nhaccuatui.com
-- [ ] App Android
+- [x] https://tumblr.com
+- [x] http://chiasenhac.vn
+- [x] http://nhaccuatui.com
+- [x] App Android
