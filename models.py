@@ -7,51 +7,82 @@ VIDEO_EXTENTIONS = ['mp4', 'm4v', 'flv', 'webm', 'avi', '3gp']
 
 class FileInfo(object):
 	def __init__(self, url='', quality='', title='', ext=''):
-		#make sure url valid
-		self._url = url if re.search('^http(s)?://', url) else ('http://' + url)
-		self._quality = quality
-		self._title = title or (self._url.split('/')[-1] if ('/' in self._url) else '')
-		self._ext = ext or (self._url.split('.')[-1] if ('.' in self._url) else '')		
+		# Make sure url valid
+		self.__url = url if re.search('^http(s)?://', url) else ('http://' + url)
+		self.__quality = quality
+		self.__title = title or 'Untitled'
+		# Get ext of file in url
+		ext = ext or self.__url.split('.')[-1]
+		# ext = tar.gz
+		self.__ext = ext if len(ext) <= 6 else ''
 
 	def __str__(self):
-		return self._url 
+		return self.__url + '   ' + self.fileName
 
 	def to_tuple(self):
-		return [self._url, self.fileName, self._ext]
+		return [self.__url, self.fileName, self.__ext]
 
 	@property
 	def url(self):
-		return self._url 
+		return self.__url 
+
+	@property
+	def quality(self):
+		return self.__quality 
+
+	@property
+	def title(self):
+		return self.__title
+
+	@property
+	def ext(self):
+		return self.__ext
+
 	@property
 	def fileName(self):
-		quality = str(self._quality)
+		# Remove duplicate ext
+		file_name = self.__title
+		ext = '.' + self.__ext
+		if (file_name.endswith(ext)):
+			file_name = file_name.replace(ext, '')
+			
+		quality = str(self.__quality)
 		try:
-			int(self._quality)
-			if (self._ext in AUDIO_EXTENTIONS):
+			int(self.__quality)
+			if (self.__ext in AUDIO_EXTENTIONS):
 				quality +='kbps' 
-			elif (self._ext in VIDEO_EXTENTIONS):
+			elif (self.__ext in VIDEO_EXTENTIONS):
 				quality += 'p'
 		except Exception as e:
 			pass
-		return ((self._title + '['+quality+']') if self._quality else self._title) + '.' + self._ext
+
+		if quality:
+			file_name += '-' + quality
+		file_name += ext
+
+		return file_name
 
 	def set_url_title(self, title=None):
-		title = title or self._fileName
+		title = title or self.__fileName
 
-		if title and (isinstance(title, unicode) or isinstance(title, str)) :
+		if title and (isinstance(title, unicode) or isinstance(title, str)):
+			# urlencode title
 			title = urllib.quote_plus(title)
+
+			# Replace existed title with new title or append new title
 			match = re.search('\&title=(.*?)(&|$)', url)
 			if match:
-				url = self._url.replace(match.group(1),title)
+				url = self.__url.replace(match.group(1),title)
 			else:
-				url = self._url + '&title=' + title
+				url = self.__url + '&title=' + title
 
-		self._url = ''.join( re.findall('[\w:\\\/\.?=&%-]', url) )
-		return self._url	 
+		# Get all legal character
+		self.__url = ''.join( re.findall('[\w:\\\/\.?=&%-]', url) )
+		return self.__url	 
 
 	def newObj(self, newUrl=None, newQuality=None, newTitle=None, newExt=None):
-		return FileInfo(url = newUrl or self._url, quality = newQuality or self._quality, \
-						title = newTitle or self._title, ext = newExt or self._ext)
+		return FileInfo(url = newUrl or self.__url, quality = newQuality or self.__quality, \
+						title = newTitle or self.__title, ext = newExt or self.__ext)
 
 
 
