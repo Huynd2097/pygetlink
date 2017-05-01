@@ -2,7 +2,7 @@
 
 ## List host
 
-- [ ] ~~http://phimmoi.net~~
+- [x] http://phimmoi.net
 - [ ] ~~http://anime47.com~~
 - [x] http://mp3.zing.vn
 - [x] http://tv.zing.vn
