@@ -1,20 +1,22 @@
 import urllib
 import re
 
-
 AUDIO_EXTENTIONS = ['mp3', 'm4a', 'flac', 'wav']
 VIDEO_EXTENTIONS = ['mp4', 'm4v', 'flv', 'webm', 'avi', '3gp']
 
 class FileInfo(object):
-	def __init__(self, url='', quality='', title='', ext=''):
+	def __init__(self, url='', quality='', title='', ext='', size=0):
 		# Make sure url valid
-		self.__url = url if re.search('^http(s)?://', url) else ('http://' + url)
+		self.__url = url 
+		if self.__url and (not re.search('^http(s)?://', url)):
+			 self.__url = 'http://' + self.__url
 		self.__quality = quality
 		self.__title = title or 'Untitled'
 		# Get ext of file in url
 		ext = ext or self.__url.split('.')[-1]
 		# ext = tar.gz
 		self.__ext = ext if len(ext) <= 6 else ''
+		self.__size = size 
 
 	def __str__(self):
 		return self.__url + '   ' + self.fileName
@@ -39,7 +41,7 @@ class FileInfo(object):
 		return self.__ext
 
 	@property
-	def fileName(self):
+	def filename(self):
 		# Remove duplicate ext
 		file_name = self.__title
 		ext = '.' + self.__ext
@@ -59,8 +61,12 @@ class FileInfo(object):
 		if quality:
 			file_name += '-' + quality
 		file_name += ext
-
 		return file_name
+
+	@property
+	def size(self):
+		return self.__size
+
 
 	def set_url_title(self, title=None):
 		title = title or self.__fileName

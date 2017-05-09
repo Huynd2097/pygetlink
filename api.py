@@ -37,9 +37,6 @@ ERROR_CODE = {
 }
 
 
-#Set error and return
-def to_json(status='', message=''):
-	return {'status' : status, 'message' : message}
 
 #multithread getlinks
 def multi_run_getlinks(args={}):
@@ -53,7 +50,8 @@ def multi_run_getlinks(args={}):
 
 #validate url is supported 
 #is_return_func: return callable function
-def check_url(url, isList=False, is_return_func=False):
+def check_url(url, islist=False, is_return_func=False):
+	url = unicode(url)
 	if not re.search('^http(s)?://', url):
 		url = 'http://' + url
 
@@ -64,50 +62,65 @@ def check_url(url, isList=False, is_return_func=False):
 		return False
 
 	match = re.findall('(\w)', match.group(2))
-	name_of_func = ('getlist_' if isList else 'getlink_') + ''.join(match)
+	name_of_func = ('getlist_' if islist else 'getlink_') + ''.join(match)
 
 	if (not name_of_func in globals()):
 		return False
 	elif is_return_func:
-		return eval(name_of_func)
+		return name_of_func
 	else:
 		return True
 
 ############################################################################################################
+
+""" 
+return list = {
+	title = str,
+	lists = [
+		{'input_url' : FileInfo}
+	]
+}
+
+or 'str error' if error
+"""
 def getlist(url):
+	url = unicode(url)
 	if not re.search('^http(s)?://', url):
 		url = 'http://' + url
 
-	function_getlist = check_url(url, isList=True, is_return_func=True)
+	function_getlist = check_url(url, islist=True, is_return_func=True)
 	if not function_getlist:
-		return to_json('error',ERROR_CODE['url'])
-	
-	try:
-		return function_getlist(url)
-	except requests.ConnectionError as e:
-		return to_json('error', 'Connection Error')
-	except Exception as e:
-		print e
-		return to_json('error', 'Unidentify Error')
+		return ERROR_CODE['url']
+	# try:
+	return eval(function_getlist)(url)
+	# except requests.ConnectionError as e:
+	# 	return 'error', 'Connection Error')
+	# except Exception as e:
+	# 	print e
+	# 	return 'error', 'Unidentify Error')
 
-# auto detect host
-def getlink(url, quality='default', password='', option={}):
+
+"""
+return FileInfo or 'str error'
+"""
+def getlink(url, quality='', password='', option={}):
+	url = unicode(url)
 	if not re.search('^http(s)?://', url):
 		url = 'http://' + url
 
 	function_getlink = check_url(url, is_return_func=True)
 	if not function_getlink:
-		return to_json('error',ERROR_CODE['url'])
+		return ERROR_CODE['url']
 
 	option.update({'quality' : quality, 'password' : password})
 
-	try:
-		return function_getlink(url, option)
-	except requests.ConnectionError as e:
-		return to_json('error', 'Connection Error')
-	except Exception as e:
-		print e
-		return to_json('error', 'Unidentify Error')
+	# try:
+	return eval(function_getlink)(url, option)
+	# except requests.ConnectionError as e:
+	# 	return 'error', 'Connection Error')
+	# except Exception as e:
+	# 	print e
+	# 	return 'error', 'Unidentify Error')
 
 
 ############################################################################################################
@@ -117,7 +130,7 @@ def getlink_mp3zing(url, option={}):
 	#get ID
 	match = re.findall('mp3\.zing\.vn/(.*?)/(.*?)/(.*?)\.html', url)
 	if (not match) or ((match[0][0] != 'bai-hat') and (match[0][0] != 'video-clip')):
-		return to_json(ERROR_CODE['url'] + url )
+		return ERROR_CODE['url']
 
 	if (match[0][0] == 'bai-hat'):
 		songType = 'song'
@@ -133,7 +146,7 @@ def getlink_mp3zing(url, option={}):
 	if ('title' in response):
 		title = response['title'] + ' - ' + response['artist']
 	else:
-		return to_json('error',ERROR_CODE['response'])
+		return ERROR_CODE['response']
 
 	link_download = response['link_download'] if (songType == 'song') else response['source']
 	fileExt = 'mp3' if (songType == 'song') else 'mp4'
@@ -143,19 +156,28 @@ def getlink_mp3zing(url, option={}):
 			ret[keyQuality] = FileInfo( url=link_download[keyQuality],
 									quality=keyQuality, title=title, ext=fileExt)
 
-	return to_json('success', get_value_by_quality(ret, option))
+	return get_value_by_quality(ret, option)
 
 
 def getlist_mp3zing(url):
 	if not re.search('mp3\.zing\.vn/(playlist)|(album)/.*?\.html', url):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 
 	source = requests.get(url).content
-	match = re.findall('<a class="fn-name" data-order=".*?" href="(.*?)"', source)
-	if not match:
-		return _support.show_error('getlist_mp3zing: no list found!')
-	return match
-	return [ match[x][0]for x in range(0, len(match)) ]
+	match_title = re.search('<title>(.*?)| Album 320 lossless</title>', source)
+	match_songs = re.findall('<a class="fn-name" data-order=".*?" href="(.*?)" title="(.*?)">', source)
+	if (not match_title) or (not match_songs):
+		return ERROR_CODE['source']
+	ret = {
+		'title' : match_title.group(1),
+		'lists' : []
+	}
+	for regex_song in match_songs:
+		song_url = regex_song[0]
+		title_song = regex_song[1]
+		tmp = { song_url : FileInfo(title=title_song) }
+		ret['lists'].append(tmp)
+	return ret
 
 ############################################################################################################
 ###error web 2017/04/28
@@ -163,7 +185,7 @@ def getlink_tvzing(url, option={}):
 	#get ID
 	match = re.findall('tv\.zing\.vn/(.*?)/(.*?)/(.*?)\.html', url)
 	if (not match) or (match[0][0] != 'video'):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 
 	title = match[0][1]
 	videoId = match[0][2]
@@ -172,11 +194,11 @@ def getlink_tvzing(url, option={}):
 
 	response = json.loads(source)
 	if ('"message": "Invalid' in source):
-		return to_json(ERROR_CODE['response'] + response['message'])
+		return ERROR_CODE['response']
 
 	response = response['response']
 	if (not response):
-		return to_json(ERROR_CODE['response'] + url)
+		return ERROR_CODE['response']
 	ret = {}
 	try:
 		baseObj = FileInfo(title=title, ext='mp4')
@@ -190,14 +212,14 @@ def getlink_tvzing(url, option={}):
 	except Exception as e:
 		pass
 
-	return to_json('success', get_value_by_quality(ret, option))
+	return get_value_by_quality(ret, option)
 
 #get links in series
 # return [{Ep : URL}]
 def getlist_tvzing(url):
 	match = re.findall('(tv\.zing\.vn/)(series/)?([\w-]+)', url)
 	if not match:
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 
 	url = 'http://' + match[0][0] + 'series/' + match[0][2] + '?p=' #?p= page
 	ret = [] 
@@ -219,31 +241,31 @@ def getlist_tvzing(url):
 def getlink_woim(url, option={}):
 	match = re.search('www.woim.net/(song)|(album)/\w+/(.*?).html', url)
 	if not match:
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 	source = requests.get(url).content
 	match_title = re.search('<title>(.*?) \| Nh', source)
 	match_code = re.search('code=(.*?)"', source)
 
 	if (not match_title) or (not match_code):
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source']
 	title = match_title.group(1)
 	response = requests.get(match_code.group(1)).content
 
 	match = re.search('location="(.*?)"', response)
 	if not match:
-		return to_json(ERROR_CODE['response'] + url)
+		return ERROR_CODE['response'] + url
 	file_info = FileInfo(url=match.group(1), quality=128, title=title, ext='mp3')
-	return to_json('success', file_info)
+	return file_info
 
 def getlist_woim(url):
 	if not re.search('www.woim.net/album/.*?html', url):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url'] + url
 
 	source = requests.get(url).content
 
 	match = re.findall('div itemprop="track".*?href="(.*?)"', source)
 	if not match:
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source'] + url
 
 	return [{x: match[x]} for x in range(0, len(match))]
 
@@ -252,13 +274,13 @@ def getlist_woim(url):
 def getlink_dailymotion(url, option={}):
 	match =  re.search('dailymotion.com/video/(.*?)_(.+)?', url)
 	if not match:
-		return to_json('error', ERROR_CODE['url'])
+		return ERROR_CODE['url']
 	videoId = match.group(1)
 	response = requests.get('http://www.dailymotion.com/embed/video/' + videoId).content
 
 	match = re.search('"title":"(.*?)"', response)
 	if (not match):
-		return to_json('error', ERROR_CODE['response'])
+		return ERROR_CODE['response']
 	title = match.group(1).decode('unicode_escape')
 
 	ret = {}
@@ -272,13 +294,13 @@ def getlink_dailymotion(url, option={}):
 	except Exception as e:
 		pass
 
-	return to_json('success', get_value_by_quality(ret, option))
+	return get_value_by_quality(ret, option)
 
 
 def getlist_dailymotion(url):
 	match = re.search('dailymotion.com/((playlist/\w+)|(channel/\w+)|(\w+))', url)
 	if not match:
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 	apiUrl = 'https://api.' + match.group(0) + '/videos?limit=100&page=' # + page
 	if not (('/playlist/' in url) or ('/channel/' in apiUrl)):
 		apiUrl = apiUrl.replace('dailymotion.com/','dailymotion.com/user/')
@@ -299,42 +321,44 @@ def getlist_dailymotion(url):
 
 #quality only 128kbps
 def  getlink_soundcloud(url, option={}):
-	match = re.search('https://soundcloud.com/.*?/(.*?)')
+	match = re.search('https://soundcloud.com/.*?/(.*?)', url)
 	if (not match):
-		return to_json(ERROR_CODE['url'] + url)
-	retObj = FileInfo(url=None, quality=128, title=match.group(1), ext='mp3')
+		return ERROR_CODE['url']
 
-	try:
-		# =============== solution #1 ===============
-		response = requests.get('http://keepvid.com/?url=' + url).content
-		match = re.search('href="(https://api.soundcloud.com/.*?)"', response)
-		if match:
-			return retObj.newObj(newUrl=match.group(1))
+	# try:
+	# 	# =============== solution #1 ===============
+	# 	response = requests.get('http://keepvid.com/?url=' + url).content
+	# 	match = re.search('href="(https://api.soundcloud.com/.*?)"', response)
+	# 	if match:
+	# 		return retObj.newObj(newUrl=match.group(1))
 
- 	except Exception as e:
- 		pass
+ # 	except Exception as e:
+ # 		pass
 	# =============== solution #2 ===============
-	listClientIDs = ['fDoItMDbsbZz8dY16ZzARCZmzgHBPotA', 'f3d0bb2d98c2cc1b42cdaff035033de0']
-	resolveUrl = 'https://api.soundcloud.com/resolve?url={TRACK_URL}' \
-				+ '&_status_code_map%5B302%5D=200&_status_format=json&client_id={CLIENT_ID}'
+	api_url_form = 'https://api.soundcloud.com/resolve?url={}' \
+			+ '&_status_code_map%5B302%5D=200&_status_format=json&client_id={}'
 
-	for clientID in listClientIDs:
-	  apiUrl = resolveUrl.replace('{TRACK_URL}', url).replace('{CLIENT_ID}', clientID)
-	  responseApi = requests.get(apiUrl).content
-	  if '"location":' in responseApi:
-		   responseTrack = requests.get(json.loads(responseApi)['location']).content
-		   return retObj.newObj(newUrl=(json.loads(responseTrack)['stream_url'] + '?client_id=' + clientID))
+	api_url = api_url_form.format(url, SOUNDCLOUD_API_KEY)
+	response = requests.get(api_url).content
+	if '"location":' in response:
+		api_url = json.loads(response)['location']
+		responseTrack = requests.get(api_url).content
+		response = json.loads(responseTrack)
+		url_track = response['stream_url'] + '?client_id=' + SOUNDCLOUD_API_KEY
+		title = response['title']
+		ret = FileInfo(url=url_track, quality=128, title=title, ext='mp3')
+		return ret
 
-	return to_json('error', ERROR_CODE['response'])
+	return ERROR_CODE['response']
 
 def getlist_soundcloud(url):
 	if not ('soundcloud.com/' in url):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 
 	response = requests.get(url).content
 	match = re.findall('a itemprop="url" href="(.*?)"', response)
 	if not match:
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source']
 
 	# ret = []
 	# for x in xrange(1,len(match)):
@@ -347,17 +371,17 @@ def getlist_soundcloud(url):
 # quality is not avalable :v
 def getlink_tumblr(url, option={}):
 	if (not 'tumblr.com/' in url):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 
 	source = requests.get(url).content
 	match = re.search("iframe src='(.*?)'", source)	 #NOTE: src='...' 
 	if not match:
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source']
 
 	source = requests.get(match.group(1)).content
 	match = re.search('source src="(.*?)"', source)
 	if not match:
-		return to_json(ERROR_CODE['response'] + url)
+		return ERROR_CODE['response']
 
 	return FileInfo(url=match.group(1), ext='mp4')
 
@@ -383,7 +407,7 @@ def login_chiasenhac():
 def getlink_chiasenhac(url, option={}):
 	match = re.search('(.*?~.*?)~.*?$', url.split('/')[-1])
 	if (not match):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 
 	title = match.group(1)
 	if (not '_download.html' in url):
@@ -392,7 +416,7 @@ def getlink_chiasenhac(url, option={}):
 	source = requests.get(url).content
 	match = re.search('href="(http://data.*?/(.*?\[.*?\]\.(.*?)))"', source)
 	if (not match):
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source']
 	baseStreamUrl = match.group(1)
 	tagQuality = '/' + match.group(2).split('/')[-2] + '/' 	
 	baseFileName = match.group(2).split('/')[-1]
@@ -415,16 +439,16 @@ def getlink_chiasenhac(url, option={}):
 			baseObj.url = baseStreamUrl.replace(tagQuality, tagSong).replace(baseFileName, baseObj.fileFullName)
 			ret[baseObj.quality] = baseObj
 
-	return to_json('success', get_value_by_quality(ret, option))
+	return get_value_by_quality(ret, option)
 
 def getlist_chiasenhac(url):
 	if (not 'chiasenhac.vn/' in url):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 
 	source = requests.get(url).content
 	match = re.findall('a href="(.*?)"\s+title="Download', source)
 	if (not match):
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source']
 
 	return [{x: match[x]} for x in range(0, len(match))]
 
@@ -432,12 +456,11 @@ def getlist_chiasenhac(url):
  # quality='only 128'
 def getlink_nhaccuatui(url, option={}):
 	if (not 'nhaccuatui.com/' in url):
-		return to_json(ERROR_CODE['url'] + url)
-
+		return ERROR_CODE['url']
 	source = requests.get(url).content
 	match = re.search('player.peConfig.xmlURL = "(.*?)"', source)
 	if (not match):
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source']
 
 	response = requests.get(match.group(1)).content
 
@@ -446,7 +469,7 @@ def getlink_nhaccuatui(url, option={}):
 	matchUrl = re.search('<location>\s*<\!\[CDATA\[(.*?)\]', response)
 	# matchUrl320 = re.search('<locationHQ>\s+<\!\[CDATA\[(.*?)\]', response)
 	if (not matchInfo) or (not matchUrl):
-		return to_json(ERROR_CODE['response'] + url)
+		return ERROR_CODE['response']
 	title = re.search('nhaccuatui.com/.+/(.*?)\..+\.html', matchInfo.group(1)).group(1)
 	urlDl = matchUrl.group(1)
 	qualityDl = int(matchQuality.group(1))
@@ -455,12 +478,12 @@ def getlink_nhaccuatui(url, option={}):
 
 def getlist_nhaccuatui(url):
 	if (not 'nhaccuatui.com/' in url):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 
 	source = requests.get(url).content
 	match = re.findall('downloadPlaylist.*?"(.*?\.html)')
 	if (not match):
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source']
 
 	return [{x: match[x]} for x in range(0, len(match))]
 
@@ -468,21 +491,21 @@ def getlist_nhaccuatui(url):
 def getlink_playgoogle(url, option={}):
 	match = re.search('play.google.com.*?details\?id=(.*?)$', url)
 	if (not match):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 
 	source = requests.get('http://apkleecher.com/download/?dl=' + match.group(1)).content
 
 	matchUrl = re.search('location.href="(.*?)"', source)
 	matchTitle = re.search('<title>Downloading (.*?)<\/title>', source)
 	if (not matchUrl) or (not matchTitle):
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source']
 
 	return FileInfo(url=('http://apkleecher.com/'+matchUrl.group(1)), title=matchTitle.group(1), ext='apk')
 
 # quality='[pending] normal/max speed'
 def getlink_fshare(url, option={}):
 	if (not 'fshare.vn/' in url):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 	pwd = option['password'] if ('password' in option) else ''
 
 	source = requests.get(url)
@@ -499,17 +522,17 @@ def getlink_fshare(url, option={}):
 		response = requests.post('https://www.fshare.vn/download/get', data=data, cookies=source.cookies).content
 		response = json.loads(response)
 		if (not 'url' in response):
-			return to_json(ERROR_CODE['response'] + url)
+			return ERROR_CODE['response']
 		return FileInfo(url=response['url'])
 
 	except Exception as e:
-		return to_json(ERROR_CODE['source'] + url)
+		return ERROR_CODE['source']
 
 # https://drive.google.com/open?id=0B8vgdJoY0JrlTDlLZGJYWUFUY2c
 def getlink_drivegoogle(url, option={}):
 	match = re.search('d\W([\w-]+)', url) #get ID file ( ?id=ID || /d/ID)
 	if (not match):
-		return to_json('error', ERROR_CODE['url'])
+		return ERROR_CODE['url']
 
 	file_id = match.group(1)
 	# Get title
@@ -520,15 +543,16 @@ def getlink_drivegoogle(url, option={}):
 	response = json.loads(response)
 
 	if (not 'title' in response):
-		return to_json('error', ERROR_CODE['response'])
+		return ERROR_CODE['response'] + ' ' + repr(response['error'])
 	title = response['title']
 	direct_url = ''
 	ext = response['fileExtension'] if ('fileExtension' in response) else ''
+	fsize = 0
 	# Get link if file is a google docs
 	if (('mimeType' in response) and ('google-apps' in response['mimeType'])):
 		# Check permission
 		if (not 'exportLinks' in response):
-			return to_json('error', 'Permission denied')
+			return 'Permission denied'
 
 		export_urls = response['exportLinks']
 		
@@ -537,14 +561,15 @@ def getlink_drivegoogle(url, option={}):
 				direct_url = value
 				break
 		if (not direct_url):
-			return to_json('error', ERROR_CODE['response'])
+			return ERROR_CODE['response']
 		# direct_url = (.*?) + exportFormat={ext}
 		ext = direct_url.split('=')[-1]
 
 	else:
 		direct_url = 'http://docs.google.com/uc?export=download&id=' + file_id
 		# 26214400 bytes = 25 MB, maximum file size that Google can scan virut
-		if (int(response['fileSize'] > 26214400)):	
+		fsize = int(response['fileSize'])
+		if (fsize > 26214400):	
 			response = session.get(direct_url, stream=True)
 
 			#get get confirm token for file size > 25 MB
@@ -556,13 +581,13 @@ def getlink_drivegoogle(url, option={}):
 					direct_url = session.get(confirm_url, stream=True).url
 					break
 
-	return to_json('success', FileInfo(url=direct_url, title=title, ext=ext))
+	return FileInfo(url=direct_url, title=title, ext=ext, size=fsize)
 #get file url in folder
 # https://www.googleapis.com/drive/v2/files?q=%270B6UqbP7Q2QG7QWRhN2xzbzQwbFU%27+in+parents&key=
 def getlist_drivegoogle(url):
 	match = re.search('drive.google.com/.*?/folders/([\w-]+)', url) #get id folder
 	if (not match):
-		return to_json(ERROR_CODE['url'] + url)
+		return ERROR_CODE['url']
 	folderId = match.group(1)
 	apiUrl = 'https://www.googleapis.com/drive/v2/files'
 
@@ -582,20 +607,25 @@ def getlist_drivegoogle(url):
 		'pageToken'	: '',
 		'q' 		: "'" + folderId + "' in parents",
 	}
-	countFile = 0
-	ret = []
+	ret = {
+		'title' : 'XXXXXXXXX',
+		'lists' : []
+	}
 	while 1:
 		response = json.loads( requests.get(apiUrl, params=params).content )
 		if ('error' in response):
-			return to_json('error', '(response error: ' 
-				+ response['error']['errors']['message'] + '), url: ' + url )
+			return '(response error: ' + response['error']['errors']['message'] + ')'
 
 		if (not 'items' in response):
-			return to_json(ERROR_CODE['response'] + url)
+			return ERROR_CODE['response'] + url
 
 		for itemInfo in response['items']:
-			countFile += 1
-			ret.append(itemInfo['webContentLink'])
+			input_url = itemInfo['webContentLink']
+			title = itemInfo['title']
+			ext = itemInfo['fileExtension']
+			size = int(itemInfo['fileSize'])
+			fi = FileInfo(title=title, ext=ext, size=size)
+			ret['lists'].append( {input_url:fi} )
 	
 		if ('nextPageToken' in response):
 			params['pageToken'] = response['nextPageToken']
@@ -604,7 +634,68 @@ def getlist_drivegoogle(url):
 
 
 
+############################################################################################################
 
+
+def getlink_phimmoi(url, option={}):
+	#valid url
+	if not re.search('phimmoi\.net/phim/(.+)-\d+(/.*?$)', url):
+		return ERROR_CODE['url']
+		
+	session = requests.Session()
+	source = session.get(url).content
+	match = re.search('episodeinfo-v1\.1\.php.*?episodeid=(.*?)\&number=(.*?)\&.*?\&filmslug=phim/(.+)-\d+/.*?"', source)
+	if not match:
+		return ERROR_CODE['source']
+
+	episodeid = match.group(1)
+	ep = match.group(2)
+	ep = '0' * (3 - len(ep)) + ep
+	title = match.group(3).replace('-', '_') + '_ep' + ep
+
+	aesKey = 'PhimMoi.Net@' + episodeid
+
+	urlStream = 'http://www.phimmoi.net/' + match.group(0)
+	response = session.get(urlStream).content
+
+	match = re.search('"medias":(\[.*?\])', response)
+	if not match:
+		return ERROR_CODE['response']
+
+	medias = json.loads(match.group(1))
+	ret = {}
+	for info in medias:
+		encrypt_url = info['url']
+		if not re.search('http:(.*?)\.(.*?)\.(.*?)', encrypt_url):
+			direct_url = aes_cbc_decrypt(encrypt_url, aesKey)
+
+		filmInfo = FileInfo(url = direct_url, title = title, \
+							quality = info['resolution'], ext = info['type'])
+		ret[filmInfo.quality] = filmInfo
+
+	return get_value_by_quality(ret, option)
+
+#return [ {Ep : URL}]
+def getlist_phimmoi(url):  
+	if not re.search('phimmoi\.net/phim/(.+)-\d+(/.*?$)', url):
+		return ERROR_CODE['url']
+
+	if url[-1] == '/':
+		url += 'xem-phim.html'
+	source = requests.get(url).content
+	match = re.findall('<li class="episode"><a(.*)>', source)
+	if not match:
+		return ERROR_CODE['source']
+
+	isPhimBo = '<ul class="server-list">' in source
+	ret = []
+
+	for anchor in match:
+		key = re.search('backuporder="(.*?)"', anchor).group(1) if isPhimBo \
+			else re.search('number="(.*?)"', anchor).group(1)
+		ret.append({key : 'http://www.phimmoi.net/' + re.search('href="(.*?)"', anchor).group(1) })
+
+	return ret
 
 
 
@@ -622,7 +713,7 @@ def get_value_by_quality(urls, option={}):
 	if (not urls) and (not isinstance(urls, dict)):
 		return urls
 
-	quality = option['quality'] if ('quality' in option) else 'default'
+	quality = option['quality'] if ('quality' in option) else 'maximum'
 
 	if quality in urls:
 		return urls[quality]
@@ -657,14 +748,14 @@ def get_value_by_quality(urls, option={}):
 
 # def getlink_anime47(url, quality='all'):
 # 	if not 'anime47.com/xem-phim' in url:
-# 		return to_json(ERROR_CODE[1] + url)
+# 		return ERROR_CODE[1] + url)
 
 # 	session = requests.Session()
 # 	source = session.get(url).content
 
 # 	match = re.search('\{link:"https://drive.google.com/(.*?)"', source)
 # 	if not match:
-# 		return to_json(ERROR_CODE[2] + url)
+# 		return ERROR_CODE[2] + url)
 
 # 	data = {'link' : 'https://drive.google.com/' + match.group(1) }
 # 	response = session.post('http://anime47.com/player/gkphp/plugins/gkpluginsphp.php', data=data).content
@@ -707,65 +798,3 @@ def get_value_by_quality(urls, option={}):
 
 # 	return ret
 
-############################################################################################################
-
-
-def getlink_phimmoi(url, option={}):
-	#valid url
-	if not re.search('phimmoi\.net/phim/(.+)-\d+(/.*?$)', url):
-		return to_json(ERROR_CODE['url'] + url)
-
-	session = requests.Session()
-	source = session.get(url).content
-	match = re.search('episodeinfo-v1\.1\.php.*?episodeid=(.*?)\&number=(.*?)\&.*?\&filmslug=phim/(.+)-\d+/.*?"', source)
-	if not match:
-		to_json(ERROR_CODE['source'] + url)
-
-	episodeid = match.group(1)
-	ep = match.group(2)
-	ep = '0' * (3 - len(ep)) + ep
-	title = match.group(3).replace('-', '_') + '_ep' + ep
-
-	aesKey = 'PhimMoi.Net@' + episodeid
-
-	urlStream = 'http://www.phimmoi.net/' + match.group(0)
-	response = session.get(urlStream).content
-
-	match = re.search('"medias":(\[.*?\])', response)
-	if not match:
-		return to_json(ERROR_CODE['response'] + url)
-
-	medias = json.loads(match.group(1))
-	ret = {}
-	for info in medias:
-		encrypt_url = info['url']
-		if not re.search('http:(.*?)\.(.*?)\.(.*?)', encrypt_url):
-			direct_url = utils.aes_cbc_decrypt(encrypt_url, aesKey)
-
-		filmInfo = FileInfo(url = direct_url, title = title, \
-							quality = info['resolution'], ext = info['type'])
-		ret[filmInfo.quality] = filmInfo
-
-	return to_json('Success', get_value_by_quality(ret, option)) 
-
-#return [ {Ep : URL}]
-def getlist_phimmoi(url):  
-	if not re.search('phimmoi\.net/phim/(.+)-\d+(/.*?$)', url):
-		return to_json(ERROR_CODE['url'] + url)
-
-	if url[-1] == '/':
-		url += 'xem-phim.html'
-	source = requests.get(url).content
-	match = re.findall('<li class="episode"><a(.*)>', source)
-	if not match:
-		return to_json(ERROR_CODE['source'] + url)
-
-	isPhimBo = '<ul class="server-list">' in source
-	ret = []
-
-	for anchor in match:
-		key = re.search('backuporder="(.*?)"', anchor).group(1) if isPhimBo \
-			else re.search('number="(.*?)"', anchor).group(1)
-		ret.append({key : 'http://www.phimmoi.net/' + re.search('href="(.*?)"', anchor).group(1) })
-
-	return to_json(None, ret)
